@@ -486,7 +486,7 @@ TODO: Report the probability estimate and interpret its practical meaning.
 
 ```{python}
 #| label: q4-prob-original-py
-#| echo: true
+#| echo: false
 
 import numpy as np
 
@@ -536,7 +536,7 @@ Instead of having the full balance at risk with each coin flip, assume only 50% 
 
 ```{python}
 #| label: q5-modified-50pct-py
-#| echo: true
+#| echo: false
 #| fig-cap: "Modified strategy distribution (bet 50% each round)"
 
 import pandas as pd
