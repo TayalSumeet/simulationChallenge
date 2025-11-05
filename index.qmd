@@ -389,7 +389,6 @@ prob_double = np.mean(final_balances >= 2 * starting_balance)  # Outcomes that d
 prob_break_even = np.mean(final_balances >= starting_balance)  # Break-even or better
 
 # Create visualization
-fig, ax = plt.subplots(figsize=(12, 6))
 
 # Histogram with color coding
 # Plotting the distribution of final balances
