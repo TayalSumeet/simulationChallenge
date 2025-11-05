@@ -89,10 +89,53 @@ TODO: Explain whether the expected value of your account balance after one flip 
 
 ```{python}
 #| label: q1-expected-value-py
-#| echo: true
+#| echo: false
 
 # TODO: Compute EV after one flip in Python
 # - Show calculation and brief explanation
+
+import numpy as np
+
+# Initial buy-in
+buy_in = 30000
+
+# Outcomes after one flip
+heads_balance = buy_in * 1.5  # 50% increase
+tails_balance = buy_in * 0.6  # 40% decrease
+
+# Probabilities (fair coin)
+p_heads = 0.5
+p_tails = 0.5
+
+# Expected value calculation
+expected_value = p_heads * heads_balance + p_tails * tails_balance
+
+# Gain analysis
+gain = expected_value - buy_in
+gain_pct = (gain / buy_in) * 100
+
+# Display results
+print(f"Initial buy-in: ${buy_in:,.2f}")
+print(f"\nOutcomes after one flip:")
+print(f"  Heads (50% increase): ${heads_balance:,.2f}")
+print(f"  Tails (40% decrease): ${tails_balance:,.2f}")
+print(f"\nExpected value: ${expected_value:,.2f}")
+print(f"Gain: ${gain:,.2f}")
+print(f"Gain as percentage of buy-in: {gain_pct:.2f}%")
+
+# Comparison
+if expected_value > buy_in:
+    comparison = ">"
+elif expected_value == buy_in:
+    comparison = "="
+else:
+    comparison = "<"
+
+print(f"\nExpected value after one flip is {comparison} ${buy_in:,.2f}")
+
+# Simple recommendation
+print(f"\nSimple analysis suggests: {'BUY-IN' if expected_value > buy_in else 'DO NOT BUY-IN'}")
+print("(Note: This is based only on expected value after one flip)")
 
 ```
 
@@ -102,13 +145,193 @@ Briefly narrate and visualize what happens to your account balance over the cour
 
 ```{python}
 #| label: q2-single-sim-py
-#| echo: true
+#| echo: false
 #| fig-cap: "Single simulation path of account balance"
 
-# TODO: Simulate one path from $30,000 over N periods
-# - Make a matplotlib (OO) time-series
-# - Set seed for reproducibility
+import numpy as np
+import matplotlib.pyplot as plt
 
+# Set random seed for reproducibility
+np.random.seed(42)
+
+# Parameters
+buy_in = 30000
+starting_age = 53 
+final_age = 75
+n_years = final_age - starting_age
+
+# Initialize simulation
+balance = buy_in
+balances = [balance]  # Track balance over time
+coin_flips = []  # Track coin flips (1 = heads, 0 = tails)
+
+# Simulate one path
+for year in range(n_years):
+    # Flip fair coin: 1 = heads, 0 = tails
+    flip = np.random.binomial(1, 0.5)
+    coin_flips.append(flip)
+    
+    # Update balance based on coin flip
+    if flip == 1:  # Heads: increase by 50%
+        balance = balance * 1.5
+    else:  # Tails: decrease by 40%
+        balance = balance * 0.6
+    
+    balances.append(balance)
+
+# Calculate additional statistics for annotations
+max_balance = max(balances)
+min_balance = min(balances)
+max_idx = balances.index(max_balance)
+min_idx = balances.index(min_balance)
+num_heads = sum(coin_flips)
+num_tails = n_years - num_heads
+final_gain_pct = ((balance - buy_in) / buy_in) * 100
+
+# Create enhanced time series plot with subplots
+fig = plt.figure(figsize=(14, 8))
+gs = fig.add_gridspec(2, 1, height_ratios=[3, 1], hspace=0.15)
+
+# Main plot
+ax1 = fig.add_subplot(gs[0])
+years = np.arange(starting_age, final_age + 1)
+
+# Color-code line segments based on gains/losses
+for i in range(len(balances) - 1):
+    if coin_flips[i] == 1:  # Heads - gain
+        color = '#2ecc71'  # Green
+        alpha = 0.8
+    else:  # Tails - loss
+        color = '#e74c3c'  # Red
+        alpha = 0.8
+    ax1.plot([years[i], years[i+1]], [balances[i], balances[i+1]], 
+             color=color, linewidth=2.5, alpha=alpha, zorder=2)
+
+# Add markers at each point
+for i, (year, bal) in enumerate(zip(years, balances)):
+    if i == 0:  # Starting point
+        ax1.plot(year, bal, marker='o', markersize=10, color='darkblue', 
+                zorder=5, label='Starting Point')
+    elif i == len(balances) - 1:  # Ending point
+        ax1.plot(year, bal, marker='s', markersize=12, color='darkgreen', 
+                zorder=5, label='Final Balance', markeredgewidth=2, 
+                markeredgecolor='black')
+    else:
+        marker_color = '#2ecc71' if coin_flips[i-1] == 1 else '#e74c3c'
+        ax1.plot(year, bal, marker='o', markersize=5, color=marker_color, 
+                zorder=3, alpha=0.7)
+
+# Highlight maximum and minimum points
+ax1.plot(years[max_idx], max_balance, marker='^', markersize=15, 
+         color='gold', markeredgecolor='black', markeredgewidth=2,
+         zorder=6, label=f'Peak: ${max_balance:,.0f}')
+ax1.plot(years[min_idx], min_balance, marker='v', markersize=15, 
+         color='purple', markeredgecolor='black', markeredgewidth=2,
+         zorder=6, label=f'Trough: ${min_balance:,.0f}')
+
+# Reference lines
+ax1.axhline(y=buy_in, color='red', linestyle='--', linewidth=2, 
+           label=f'Initial Buy-in (${buy_in:,})', zorder=1, alpha=0.7)
+ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.8, alpha=0.3, zorder=1)
+
+# Shaded regions
+ax1.axhspan(buy_in, max(max_balance, buy_in * 1.5), alpha=0.1, 
+           color='green', label='Profit Zone', zorder=0)
+ax1.axhspan(0, buy_in, alpha=0.1, color='red', label='Loss Zone', zorder=0)
+
+# Set axis limits first to avoid annotation placement issues
+ax1.set_xlim(starting_age - 1, final_age + 1)
+y_range = max(max_balance, buy_in * 1.5) - min(min_balance, buy_in * 0.5)
+ax1.set_ylim(min(min_balance, buy_in * 0.5) - y_range * 0.05, 
+             max(max_balance, buy_in * 1.5) + y_range * 0.15)
+
+# Labels and formatting
+ax1.set_xlabel('Age', fontsize=12, fontweight='bold')
+ax1.set_ylabel('Account Balance ($)', fontsize=12, fontweight='bold')
+ax1.set_title(f'Single Simulation: Account Balance Over Time (Age {starting_age} → {final_age})', 
+             fontsize=14, fontweight='bold', pad=15)
+ax1.grid(True, alpha=0.3, linestyle='--', zorder=0)
+ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1000:.1f}K'))
+
+
+# Add annotations for key moments with smart positioning to avoid overlaps
+y_top = ax1.get_ylim()[1]
+y_bottom = ax1.get_ylim()[0]
+x_left = ax1.get_xlim()[0]
+x_right = ax1.get_xlim()[1]
+
+# Annotate starting point - place on the right side to avoid legend
+ax1.annotate(f'START\n${buy_in:,}', 
+            xy=(starting_age, buy_in), 
+            xytext=(starting_age + (x_right - x_left) * 0.15, buy_in * 1.15),
+            fontsize=9, fontweight='bold',
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8),
+            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.2', 
+                          color='blue', lw=1.5))
+
+# Annotate ending point - adjust position based on value to avoid other annotations
+if abs(final_age - years[max_idx] if max_idx != len(balances) - 1 else 100) > 2:
+    # Enough space, place annotation
+    end_x_offset = -3 if balance > buy_in else -2.5
+    end_y_offset = 1.08 if balance > buy_in else 0.92
+    ax1.annotate(f'END\n${balance:,.0f}\n({final_gain_pct:+.1f}%)', 
+                xy=(final_age, balance), 
+                xytext=(final_age + end_x_offset, balance * end_y_offset),
+                fontsize=9, fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.5', 
+                         facecolor='lightgreen' if balance > buy_in else 'lightcoral', 
+                         alpha=0.8),
+                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.2', 
+                              color='green' if balance > buy_in else 'red', lw=1.5))
+
+# Annotate peak if different from end and not too close to other annotations
+if max_idx != len(balances) - 1 and abs(years[max_idx] - final_age) > 2:
+    # Check if peak annotation won't overlap with end annotation
+    peak_x_offset = 1.5 if years[max_idx] < final_age - 3 else -1.5
+    peak_y_offset = 1.12
+    ax1.annotate(f'Peak\n${max_balance:,.0f}', 
+                xy=(years[max_idx], max_balance), 
+                xytext=(years[max_idx] + peak_x_offset, max_balance * peak_y_offset),
+                fontsize=8, fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='gold', alpha=0.8),
+                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.2', 
+                              color='orange', lw=1.5))
+
+# Place legend in upper right, avoiding stats box and annotations
+ax1.legend(loc='upper right', fontsize=8, framealpha=0.95, ncol=2, 
+          columnspacing=0.8, handlelength=1.5, bbox_to_anchor=(0.98, 0.98))
+
+# Bottom subplot: Coin flip sequence visualization
+ax2 = fig.add_subplot(gs[1])
+coin_colors = ['#2ecc71' if flip == 1 else '#e74c3c' for flip in coin_flips]
+ax2.bar(range(n_years), [1 if flip == 1 else -1 for flip in coin_flips], 
+        color=coin_colors, alpha=0.7, edgecolor='black', linewidth=0.5)
+ax2.axhline(y=0, color='black', linewidth=1)
+ax2.set_ylabel('Coin\nFlip', fontsize=10, fontweight='bold')
+ax2.set_xlabel('Year (Sequence)', fontsize=10, fontweight='bold')
+ax2.set_title('Coin Flip Sequence (Green = Heads ↑, Red = Tails ↓)', 
+             fontsize=11, fontweight='bold')
+ax2.set_yticks([-1, 1])
+ax2.set_yticklabels(['Tails', 'Heads'])
+ax2.set_xticks(range(0, n_years, max(1, n_years // 10)))
+ax2.grid(True, alpha=0.3, axis='x')
+ax2.set_xlim(-0.5, n_years - 0.5)
+
+plt.suptitle('Investment Game: Single Simulation Path Analysis', 
+            fontsize=16, fontweight='bold', y=0.995)
+
+plt.tight_layout()
+plt.show()
+
+# Display key statistics
+print(f"Starting age: {starting_age}")
+print(f"Final age: {final_age}")
+print(f"Number of years simulated: {n_years}")
+print(f"\nInitial balance: ${buy_in:,.2f}")
+print(f"Final balance: ${balance:,.2f}")
+print(f"Net gain/loss: ${balance - buy_in:,.2f} ({((balance - buy_in) / buy_in * 100):.2f}%)")
+print(f"\nHeads (wins): {sum(coin_flips)} out of {n_years} flips ({sum(coin_flips)/n_years*100:.1f}%)")
+print(f"Tails (losses): {n_years - sum(coin_flips)} out of {n_years} flips ({(n_years - sum(coin_flips))/n_years*100:.1f}%)")
 ```
 
 ### 3) 100 Simulations: Distribution of Final Balances
@@ -117,12 +340,143 @@ TODO: Visually and narratively describe the distribution of your account balance
 
 ```{python}
 #| label: q3-dist-100-py
-#| echo: true
+#| echo: false
 #| fig-cap: "Distribution of final balances across 100 simulations"
 
-# TODO: Run 100 simulations and plot histogram of final balances
-# - Add vertical line at $30,000
-# - Compute mean, median, and P(final > $30,000)
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import seaborn as sns
+import pandas as pd
+
+# Parameters
+starting_balance = 30000
+starting_age = 53
+final_age = 75
+n_years = final_age - starting_age
+n_simulations = 100
+
+# Run simulations
+final_balances = []
+np.random.seed(42)
+
+for _ in range(n_simulations):
+    balance = starting_balance
+    flips = np.random.choice(['Heads', 'Tails'], size=n_years)
+    for flip in flips:
+        balance *= 1.5 if flip == 'Heads' else 0.6
+    final_balances.append(balance)
+
+# Create DataFrame
+results_df = pd.DataFrame({
+    'Simulation': range(1, n_simulations + 1),
+    'Final Balance': final_balances
+})
+results_df['Final Balance'] = results_df['Final Balance'].round(2)
+
+final_balances = np.array(final_balances)
+
+# Compute statistics
+mean_balance = np.mean(final_balances)
+median_balance = np.median(final_balances)
+std_balance = np.std(final_balances)
+min_balance = np.min(final_balances)
+max_balance = np.max(final_balances)
+
+# Probability calculations
+prob_above_buyin = np.mean(final_balances > starting_balance)
+prob_double = np.mean(final_balances >= 2 * starting_balance)  # Outcomes that double your money
+prob_break_even = np.mean(final_balances >= starting_balance)  # Break-even or better
+
+# Create visualization
+fig, ax = plt.subplots(figsize=(12, 6))
+
+# Histogram with color coding
+# Plotting the distribution of final balances
+sns.set(style="whitegrid")
+fig, ax = plt.subplots(figsize=(8, 5))
+
+# Background shading
+x_min = min(results_df['Final Balance'].min(), starting_balance * 0.5)
+x_max = results_df['Final Balance'].max() * 1.1
+ax.axvspan(x_min, starting_balance, color='red', alpha=0.1)
+ax.axvspan(starting_balance, x_max, color='green', alpha=0.1)
+
+# Histogram with log-scaled x-axis
+sns.histplot(results_df['Final Balance'], bins=30, log_scale=(True, False),
+             color='skyblue', edgecolor='black', ax=ax)
+
+# Vertical line at $30,000
+ax.axvline(x=starting_balance, color='red', linestyle='--', linewidth=2, label='Starting Balance ($30,000)')
+
+# Format x-axis in dollar notation
+ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('${x:,.0f}'))
+
+# Labels and title
+plt.title('Distribution of Final Account Balances (100 Simulations)', fontsize=16, weight='bold')
+plt.xlabel('Final Balance ($)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# Print comprehensive statistics and narrative
+print("="*80)
+print("DISTRIBUTION ANALYSIS")
+print("="*80)
+print(f"\nSimulation Parameters:")
+print(f"  Initial investment: ${starting_balance:,}")
+print(f"  Time period: {n_years} years (age {starting_age} to {final_age})")
+print(f"  Number of simulations: {n_simulations}")
+
+print(f"\nDistribution Statistics:")
+print(f"  Mean final balance:      ${mean_balance:,.2f}")
+print(f"  Median final balance:    ${median_balance:,.2f}")
+print(f"  Standard deviation:      ${std_balance:,.2f}")
+print(f"  Minimum final balance:   ${min_balance:,.2f}")
+print(f"  Maximum final balance:   ${max_balance:,.2f}")
+
+print(f"\n" + "="*80)
+print("PROBABILITY OF FAVORABLE OUTCOMES")
+print("="*80)
+print(f"  P(final balance > ${starting_balance:,}):     {prob_above_buyin:.1%} ({np.sum(final_balances > starting_balance)}/{n_simulations} simulations)")
+print(f"  P(final balance ≥ ${2*starting_balance:,}):   {prob_double:.1%} ({np.sum(final_balances >= 2*starting_balance)}/{n_simulations} simulations)")
+print(f"  P(final balance ≥ ${starting_balance:,}):    {prob_break_even:.1%} (break-even or better)")
+
+print(f"\n" + "="*80)
+print("NARRATIVE DESCRIPTION")
+print("="*80)
+print(f"\nAfter running {n_simulations} simulations of the investment game over {n_years} years:")
+print(f"\n1. DISTRIBUTION CHARACTERISTICS:")
+print(f"   • The distribution is highly skewed with a long right tail")
+print(f"   • Mean balance (${mean_balance:,.2f}) is {'higher' if mean_balance > median_balance else 'lower'} than median (${median_balance:,.2f})")
+print(f"   • This indicates extreme outcomes: some simulations result in very high balances,")
+print(f"     while others result in significant losses")
+print(f"   • The wide range (${min_balance:,.2f} to ${max_balance:,.2f}) shows high variability")
+
+print(f"\n2. PROBABILITY OF HAPPY OUTCOMES:")
+print(f"   • After investing ${starting_balance:,}, the probability of ending with MORE than your initial")
+print(f"     investment is {prob_above_buyin:.1%}")
+print(f"   • This means in {np.sum(final_balances > starting_balance)} out of {n_simulations} simulations,")
+print(f"     you would be profitable")
+print(f"   • The probability of at least DOUBLING your money is {prob_double:.1%}")
+
+print(f"\n3. RISK ASSESSMENT:")
+if prob_above_buyin < 0.5:
+    print(f"   • Less than half of simulations result in profit - this is a HIGH RISK investment")
+elif prob_above_buyin < 0.6:
+    print(f"   • Slightly more than half result in profit - this is a MODERATE RISK investment")
+else:
+    print(f"   • More than half of simulations result in profit - but still risky due to volatility")
+
+print(f"   • The high standard deviation (${std_balance:,.2f}) indicates significant uncertainty")
+print(f"   • You could lose as much as ${starting_balance - min_balance:,.2f} or gain as much as ${max_balance - starting_balance:,.2f}")
+
+print(f"\n4. CONCLUSION:")
+print(f"   • If you define 'happy outcomes' as finishing with more than your ${starting_balance:,} investment,")
+print(f"     the probability is {prob_above_buyin:.1%}")
+print(f"   • However, the extreme variability means outcomes are highly unpredictable")
+print("="*80)
 
 ```
 
@@ -134,24 +488,198 @@ TODO: Report the probability estimate and interpret its practical meaning.
 #| label: q4-prob-original-py
 #| echo: true
 
-# TODO: Using the 100 simulations above, estimate P(final > 30000)
-# - Print numeric result with 3 decimals
+import numpy as np
 
+# Set random seed for reproducibility (same as section 3)
+np.random.seed(42)
+
+# Parameters (matching previous sections)
+buy_in = 30000
+starting_age = 53
+final_age = 75
+n_years = final_age - starting_age
+n_simulations = 100
+
+# Run 100 simulations (same as section 3)
+final_balances = []
+
+for sim in range(n_simulations):
+    balance = buy_in
+    
+    # Simulate one path over n_years
+    for year in range(n_years):
+        flip = np.random.binomial(1, 0.5)
+        if flip == 1:  # Heads: increase by 50%
+            balance = balance * 1.5
+        else:  # Tails: decrease by 40%
+            balance = balance * 0.6
+    
+    final_balances.append(balance)
+
+final_balances = np.array(final_balances)
+
+# Estimate probability that final balance > $30,000
+prob_above_buyin = np.mean(final_balances > buy_in)
+
+# Print result with 3 decimals
+print(f"Probability estimate: P(final balance > ${buy_in:,}) = {prob_above_buyin:.3f}")
+print(f"\nInterpretation:")
+print(f"  Based on {n_simulations} simulations over {n_years} years (age {starting_age} to {final_age}),")
+print(f"  the estimated probability of ending with more than the initial ${buy_in:,} investment is {prob_above_buyin:.1%}.")
+print(f"\n  This means in approximately {int(prob_above_buyin * n_simulations)} out of {n_simulations} simulations,")
+print(f"  the final balance exceeded the initial buy-in amount.")
 ```
 
 ### 5) Modified Strategy (Bet Exactly 50% Each Round)
 
-Instead of having the full balance at risk with each coin flip, assume only 25% of your balance is gambled each year. Compare this to the original game. Which is riskier? Which has better upside?
+Instead of having the full balance at risk with each coin flip, assume only 50% of your balance is gambled each year. Compare this to the original game. Which is riskier? Which has better upside?
 
 ```{python}
 #| label: q5-modified-50pct-py
 #| echo: true
 #| fig-cap: "Modified strategy distribution (bet 50% each round)"
 
-# TODO: Implement the modified game
-# - Run 100 simulations; plot distribution of final balances
-# - Estimate P(final > 30000) and compare to original
-# - visually compare the outcome distributions of the original and modified strategies
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import seaborn as sns
+
+# Parameters (matching sections 3 and 4)
+starting_balance = 30000
+starting_age = 53
+final_age = 75
+years = final_age - starting_age
+simulations = 100
+
+# Run simulations for both strategies (matching style from sections 3 and 4)
+modified_balances = []
+
+# Simulation logic: only 50% of balance is gambled each year
+def simulate_partial_risk():
+    balance = starting_balance
+    for _ in range(years):
+        gamble = balance * 0.5
+        safe = balance * 0.5
+        flip = np.random.choice(['Heads', 'Tails'])
+        gamble = gamble * 1.5 if flip == 'Heads' else gamble * 0.6
+        balance = gamble + safe
+    return balance
+
+# Run simulations
+np.random.seed(42)
+modified_balances = [simulate_partial_risk() for _ in range(simulations)]
+
+# Create DataFrames
+original_df = results_df
+original_df['Strategy'] = 'Original'
+
+modified_df = pd.DataFrame({
+    'Simulation': range(1, n_simulations + 1),
+    'Final Balance': np.round(modified_balances, 2),
+    'Strategy': 'Modified'
+})
+combined_df = pd.concat([original_df, modified_df], ignore_index=True)
+
+original_balances = np.array(final_balances)
+modified_balances = np.array(modified_balances)
+
+# Compute statistics for both
+orig_mean = np.mean(original_balances)
+orig_median = np.median(original_balances)
+orig_std = np.std(original_balances)
+orig_prob_gain = np.mean(original_balances > starting_balance)
+orig_min = np.min(original_balances)
+orig_max = np.max(original_balances)
+
+mod_mean = np.mean(modified_balances)
+mod_median = np.median(modified_balances)
+mod_std = np.std(modified_balances)
+mod_prob_gain = np.mean(modified_balances > starting_balance)
+mod_min = np.min(modified_balances)
+mod_max = np.max(modified_balances)
+
+# --- Plotting ---
+sns.set(style="whitegrid")
+fig, ax = plt.subplots(figsize=(8, 5))
+
+# Background shading
+x_min = min(min(original_df['Final Balance']), min(modified_df['Final Balance']), starting_balance * 0.5)
+x_max = max(max(original_df['Final Balance']), max(modified_df['Final Balance'])) * 1.1
+ax.axvspan(x_min, starting_balance, color='red', alpha=0.1)
+ax.axvspan(starting_balance, x_max, color='green', alpha=0.1)
+
+# Histograms
+sns.histplot(original_df['Final Balance'], bins=30, log_scale=(True, False),
+             color='skyblue', edgecolor='black', label='Full Risk Strategy', ax=ax, alpha=0.6)
+sns.histplot(modified_df['Final Balance'], bins=30, log_scale=(True, False),
+             color='orange', edgecolor='black', label='Partial Risk Strategy', ax=ax, alpha=0.6)
+
+# Vertical line at $30,000
+ax.axvline(x=starting_balance, color='red', linestyle='--', linewidth=2, label='Starting Balance ($30,000)')
+
+# Dollar formatting
+ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('${x:,.0f}'))
+
+# Labels and legend
+plt.title('Final Account Balance Distribution: Full vs Partial Risk Strategies', fontsize=16, weight='bold')
+plt.xlabel('Final Balance ($)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# Print comparison statistics
+print("="*80)
+print("COMPARISON: Original vs Modified Strategy (50% at Risk)")
+print("="*80)
+print(f"\nORIGINAL STRATEGY (Full Balance at Risk):")
+print(f"  Mean final balance:        ${orig_mean:,.2f}")
+print(f"  Median final balance:      ${orig_median:,.2f}")
+print(f"  Standard deviation:        ${orig_std:,.2f}")
+print(f"  Minimum:                   ${orig_min:,.2f}")
+print(f"  Maximum:                   ${orig_max:,.2f}")
+print(f"  P(final > ${starting_balance:,}):        {orig_prob_gain:.2%}")
+print(f"  Profitable simulations:    {np.sum(original_balances > starting_balance)}/{n_simulations}")
+
+print(f"\nMODIFIED STRATEGY (50% of Balance at Risk):")
+print(f"  Mean final balance:        ${mod_mean:,.2f}")
+print(f"  Median final balance:      ${mod_median:,.2f}")
+print(f"  Standard deviation:        ${mod_std:,.2f}")
+print(f"  Minimum:                   ${mod_min:,.2f}")
+print(f"  Maximum:                   ${mod_max:,.2f}")
+print(f"  P(final > ${starting_balance:,}):        {mod_prob_gain:.2%}")
+print(f"  Profitable simulations:    {np.sum(modified_balances > starting_balance)}/{n_simulations}")
+
+print(f"\nCOMPARISON:")
+print(f"  Mean difference:           ${mod_mean - orig_mean:,.2f}")
+print(f"  Std dev ratio (mod/orig):  {mod_std/orig_std:.2f}")
+print(f"  Max difference:            ${mod_max - orig_max:,.2f}")
+print(f"  Min difference:            ${mod_min - orig_min:,.2f}")
+print(f"  Probability gain diff:     {mod_prob_gain - orig_prob_gain:.2%}")
+
+print(f"\n" + "="*80)
+print("INTERPRETATION: Which is Riskier? Which has Better Upside?")
+print("="*80)
+if orig_std > mod_std:
+    print(f"  • The ORIGINAL strategy is RISKIER (std dev: ${orig_std:,.2f} vs ${mod_std:,.2f})")
+    print(f"    → Higher volatility means more uncertainty")
+else:
+    print(f"  • The MODIFIED strategy is RISKIER (std dev: ${mod_std:,.2f} vs ${orig_std:,.2f})")
+    print(f"    → Higher volatility means more uncertainty")
+
+if orig_max > mod_max:
+    print(f"  • The ORIGINAL strategy has BETTER UPSIDE (max: ${orig_max:,.2f} vs ${mod_max:,.2f})")
+    print(f"    → Can achieve much higher maximum returns")
+else:
+    print(f"  • The MODIFIED strategy has BETTER UPSIDE (max: ${mod_max:,.2f} vs ${orig_max:,.2f})")
+    print(f"    → Can achieve much higher maximum returns")
+
+print(f"\n  • The modified strategy (50% at risk) has:")
+print(f"    - Lower risk per year (25% gain vs 50% gain, 20% loss vs 40% loss)")
+print(f"    - More conservative approach")
+print(f"    - Lower maximum potential but also lower minimum loss")
+print("="*80)
 
 ```
 
@@ -159,6 +687,110 @@ Instead of having the full balance at risk with each coin flip, assume only 25% 
  
 What is the Kelly Criterion and how does it relate to the modified strategy?
 
+```{python}
+#| echo: false
+
+import numpy as np
+
+# Calculate Kelly Criterion for this investment game
+# Game parameters:
+# - Heads (50% probability): gain 50% (multiply by 1.5)
+# - Tails (50% probability): lose 40% (multiply by 0.6)
+
+p = 0.5  # Probability of winning (heads)
+q = 0.5  # Probability of losing (tails)
+win_multiplier = 1.5  # If heads: balance * 1.5
+loss_multiplier = 0.6  # If tails: balance * 0.6
+
+# Kelly Criterion formula: f* = (p × b - q) / b
+# Where b is the net odds (gain rate)
+# For this game: if you bet fraction f and win, you get (1 + f*b)
+# If you bet f and lose, you get (1 - f*loss_rate)
+
+# Alternative calculation: Kelly fraction maximizes log growth
+# Expected log return = p × ln(1 + f × gain) + q × ln(1 - f × loss)
+# Gain rate = 0.5 (50% gain), Loss rate = 0.4 (40% loss)
+
+# Kelly Criterion for multiplicative outcomes
+# If you bet fraction f of your balance:
+# - Win: balance becomes (1-f) + f×1.5 = 1 + 0.5f
+# - Lose: balance becomes (1-f) + f×0.6 = 1 - 0.4f
+# Kelly maximizes: p×ln(1 + 0.5f) + q×ln(1 - 0.4f)
+# Taking derivative and setting to zero:
+# p×0.5/(1+0.5f) = q×0.4/(1-0.4f)
+# Solving: 0.25/(1+0.5f) = 0.2/(1-0.4f)
+# 0.25(1-0.4f) = 0.2(1+0.5f)
+# 0.25 - 0.1f = 0.2 + 0.1f
+# 0.05 = 0.2f
+# f = 0.25 = 25%
+
+gain_rate = 0.5  # 50% gain on win
+loss_rate = 0.4  # 40% loss on loss
+
+# Expected return per bet
+expected_return = p * gain_rate - q * loss_rate
+
+# Kelly fraction calculation
+kelly_fraction = 0.25  # 25% (calculated from maximizing log growth)
+
+# Alternative calculation using log optimization
+# We want to maximize: p*ln(1 + f*0.5) + q*ln(1 - f*0.4)
+# Taking derivative and setting to zero gives us the Kelly fraction
+
+print("="*80)
+print("KELLY CRITERION ANALYSIS")
+print("="*80)
+print(f"\nGame Parameters:")
+print(f"  Probability of winning (heads): {p:.1%}")
+print(f"  Probability of losing (tails): {q:.1%}")
+print(f"  Gain on win: {gain_rate:.1%} (multiply by 1.5)")
+print(f"  Loss on loss: {loss_rate:.1%} (multiply by 0.6)")
+
+print(f"\nKelly Criterion Calculation:")
+print(f"  Expected return per bet: {expected_return:.1%}")
+print(f"  Kelly optimal fraction: {kelly_fraction:.1%}")
+print(f"  This means: bet {kelly_fraction:.1%} of your balance each round")
+
+print(f"\nInterpretation:")
+if kelly_fraction > 0:
+    print(f"  • The Kelly Criterion suggests betting {kelly_fraction:.1%} of your balance")
+    print(f"  • This maximizes long-term growth rate")
+    print(f"  • Betting more than {kelly_fraction:.1%} increases risk without increasing growth")
+    print(f"  • Betting less than {kelly_fraction:.1%} is safer but suboptimal for growth")
+else:
+    print(f"  • The Kelly fraction is negative or zero")
+    print(f"  • This suggests the game has negative expected value")
+    print(f"  • The optimal strategy would be to not bet at all")
+
+print(f"\nComparison to Our Strategies:")
+print(f"  • Original strategy: bets 100% of balance (full risk)")
+print(f"  • Modified strategy: bets 50% of balance (partial risk)")
+print(f"  • Kelly optimal: bets {kelly_fraction:.1%} of balance")
+print(f"\n  • The modified strategy ({50:.1%}) is {'closer' if abs(50 - kelly_fraction*100) < abs(100 - kelly_fraction*100) else 'farther'} to the Kelly optimal")
+print(f"    than the original strategy (100%)")
+
+print("="*80)
+```
+
+**Explanation:**
+
+The **Kelly Criterion** is a mathematical formula that determines the optimal fraction of your capital to bet in repeated favorable gambles to maximize long-term growth rate. Developed by John Kelly in 1956, it balances the trade-off between maximizing returns and avoiding ruin.
+
+**For this investment game:**
+- Heads (50% chance): gain 50% → win multiplier = 1.5
+- Tails (50% chance): lose 40% → loss multiplier = 0.6
+
+The Kelly formula calculates the optimal betting fraction as approximately **25%** of your balance each round. This maximizes the expected logarithmic growth of your wealth over time by balancing the potential gains against the risk of losses.
+
+**Relation to our findings:**
+
+1. **Original strategy (100% at risk)**: This over-bets compared to Kelly. While it can achieve higher maximum returns, it also has much higher variance and risk of significant losses. The Kelly Criterion would suggest this is too aggressive.
+
+2. **Modified strategy (50% at risk)**: This is still above the Kelly optimal of 25%, but much closer to it than the original strategy. While it's still double the Kelly recommendation, it reduces risk significantly while maintaining reasonable upside potential. The lower volatility and more consistent outcomes align better with Kelly's principle of maximizing long-term growth rather than short-term gains.
+
+3. **Key insight**: The Kelly Criterion explains why betting your full balance (original strategy) is suboptimal - it maximizes volatility rather than growth. The modified strategy, by betting only 50%, moves closer to the Kelly optimal and should theoretically provide better risk-adjusted returns over the long run, even if it has lower maximum potential.
+
+**Practical implication**: The Kelly Criterion suggests that even with a positive expected value game, you should not bet your entire balance. The optimal strategy balances growth potential with risk management, which is exactly what the modified (50% at risk) strategy attempts to do.
 
 ## Professional Presentation (From Grading TLDR)
 
